@@ -9,7 +9,21 @@
     "deleteOutDir": true,
     "watchAssets": true,
     "assets": [
-      "**/*.env"
+      "**/*.env",
+      "**/static/**/*"
+    ],
+    "plugins": [
+      {
+        "name": "@nestjs/swagger",
+        "options": {
+          "dtoFileNameSuffix": [
+            ".dto.ts",
+            ".entity.ts",
+            ".vo.ts"
+          ],
+          "introspectComments": true
+        }
+      }
     ]
   }
 }

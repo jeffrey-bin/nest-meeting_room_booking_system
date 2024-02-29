@@ -43,7 +43,6 @@ export class UserEntity {
   phone: string;
 
   @Column({
-    name: 'nick_name',
     length: 50,
     comment: '昵称',
   })
@@ -69,17 +68,16 @@ export class UserEntity {
   isAdmin: boolean;
 
   @CreateDateColumn({
-    name: 'create_time',
     comment: '创建时间',
     type: 'timestamp',
   })
-  createTime: Date;
+  createTime: string;
 
   @UpdateDateColumn({
-    name: 'update_time',
+    comment: '更新时间',
     type: 'timestamp',
   })
-  updateTime: Date;
+  updateTime: string;
 
   @ManyToMany(() => RoleEntity)
   @JoinTable({

@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Get, Query, Inject } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Query,
+  Inject,
+  DefaultValuePipe,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { RegisterUserDto } from './dto/registerUser.dto';
 import { LoginUserDto } from './dto/loginUser.dto';
@@ -6,37 +14,24 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import {
   RequiredLogin,
-  RequiredPermission,
+  // RequiredPermission,
   UserInfo,
 } from '../custom.decorator';
 import { UpdatePasswordDto } from './dto/updatePassword.dto';
 import { UpdateUserInfoDto } from './dto/updateUserInfo.dto';
+import { generateParseIntPipe } from 'src/utils';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('用户管理模块')
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Inject(JwtService)
   private readonly jwtService: JwtService;
-
   @Inject(ConfigService)
   private readonly configService: ConfigService;
-  @Get('ddd')
-  @RequiredLogin()
-  @RequiredPermission('ddd')
-  async ddd() {
-    return 'ddd';
-  }
 
-  @Get('ccc')
-  @RequiredLogin()
-  @RequiredPermission('ccc')
-  async ccc(@UserInfo('userId') userId: number, @UserInfo() userInfo) {
-    console.log(userId);
-    console.log(userInfo);
-
-    return 'ccc';
-  }
   jwtSign(user: JwtUserData) {
     const { userId, username, roles, permissions } = user;
     const accessToken = this.jwtService.sign({
@@ -61,7 +56,6 @@ export class UserController {
   async userInfo(@UserInfo('userId') userId: number) {
     return await this.userService.findDetailByUserId(userId);
   }
-
   @Post(['updatePassword', 'admin/updatePassword'])
   async updatePassword(@Body() updatePasswordDto: UpdatePasswordDto) {
     return await this.userService.updatePassword(updatePasswordDto);
@@ -86,7 +80,6 @@ export class UserController {
       throw e;
     }
   }
-
   @Post('admin/login')
   async adminLogin(@Body() loginUser: LoginUserDto) {
     return await this.userLogin(loginUser, true);
@@ -120,7 +113,6 @@ export class UserController {
       throw new Error('refreshToken 已失效，请重新登录');
     }
   }
-
   @Get('admin/refreshToken')
   async adminRefreshToken(@Query('refreshToken') refreshToken: string) {
     return await this.refreshToken(refreshToken, true);
@@ -158,5 +150,27 @@ export class UserController {
   @Post('admin/register')
   async adminRegister(@Body() registerUser: RegisterUserDto) {
     return await this.userService.register(registerUser, true);
+  }
+
+  @Get('list')
+  // @RequiredLogin()
+  async list(
+    @Query('page', new DefaultValuePipe(1), generateParseIntPipe('page'))
+    page: number,
+    @Query(
+      'pageSize',
+      new DefaultValuePipe(2),
+      generateParseIntPipe('pageSize'),
+    )
+    pageSize: number,
+    @Query('username') username: string,
+    @Query('nickName') nickName: string,
+  ) {
+    return await this.userService.getUserList(
+      page,
+      pageSize,
+      username,
+      nickName,
+    );
   }
 }

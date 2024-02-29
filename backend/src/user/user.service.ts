@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from './entities/user.entity';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, Like, Repository } from 'typeorm';
 import { RedisService } from 'src/redis/redis.service';
 import { RegisterUserDto } from './dto/registerUser.dto';
 import { md5 } from 'src/utils';
@@ -19,6 +19,7 @@ import { LoginUserVo } from './vo/loginUser.vo';
 import { UserDetailVo } from './vo/userInfo.vo';
 import { UpdatePasswordDto } from './dto/updatePassword.dto';
 import { UpdateUserInfoDto } from './dto/updateUserInfo.dto';
+import { plainToClass } from 'class-transformer';
 const REDIS_REGISTER_CAPTCHA_PREFIX = 'captcha_';
 const REDIS_UPDATE_PASSWORD_CAPTCHA_PREFIX = 'update_password_captcha_';
 const REDIS_UPDATE_USER_INFO_CAPTCHA_PREFIX = 'update_user_info_captcha_';
@@ -45,89 +46,36 @@ export class UserService {
 
   async initData() {
     const user3 = new UserEntity();
-    user3.username = 'wangwu';
+    user3.username = 'zhaoliu';
     user3.password = md5('333333');
     user3.email = 'zz@yy.com';
-    user3.nickName = '王五';
+    user3.nickName = '赵六';
     user3.isAdmin = true;
 
-    const role1 = new RoleEntity();
-    role1.name = '管理员';
-
-    const role2 = new RoleEntity();
-    role2.name = '普通用户';
-
-    const permission1 = new PermissionEntity();
-    permission1.code = 'ccc';
-    permission1.description = '访问 ccc 接口';
-
-    const permission2 = new PermissionEntity();
-    permission2.code = 'ddd';
-    permission2.description = '访问 ddd 接口';
-    user3.roles = [role1, role2];
-
-    role1.permissions = [permission1, permission2];
-    role2.permissions = [permission1];
-
-    // await this.permissionRepository.save([permission1, permission2]);
-    // await this.roleRepository.save([role1, role2]);
-    // await this.userRepository.save([user3]);
+    await this.userRepository.save([user3]);
   }
 
   async findJwtUserData(
     params: FindOneOptions<UserEntity>,
   ): Promise<JwtUserData> {
     const user = await this.userRepository.findOne(params);
+    const vo = plainToClass(UserDetailVo, user);
     return {
       userId: user.id,
       username: user.username,
-      roles: this.tranformRoles(user.roles),
-      permissions: this.transformPermission(user.roles),
+      roles: vo.roles,
+      permissions: vo.permissions,
     };
   }
-  private tranformRoles(roles: RoleEntity[]) {
-    return roles.map((role) => role.id);
-  }
-  private transformPermission(roles: RoleEntity[]) {
-    return roles.reduce(
-      (pre, cur) => [
-        ...pre,
-        ...cur.permissions.filter(
-          (item) =>
-            // deduplicate permissions by code
-            pre.findIndex((preItem) => item.code === preItem.code) === -1,
-        ),
-      ],
-      [],
-    );
-  }
+
   async findDetailByUserId(userId: number) {
     const user = await this.userRepository.findOne({
       where: {
         id: userId,
       },
     });
-    const vo = new UserDetailVo();
-    const {
-      id,
-      username,
-      nickName,
-      email,
-      avatar,
-      phone,
-      isFrozen,
-      isAdmin,
-      createTime,
-    } = user;
-    vo.id = id;
-    vo.username = username;
-    vo.nickName = nickName;
-    vo.email = email;
-    vo.avatar = avatar;
-    vo.phone = phone;
-    vo.isFrozen = isFrozen;
-    vo.isAdmin = isAdmin;
-    vo.createTime = createTime;
+    const vo = plainToClass(UserDetailVo, user);
+
     return vo;
   }
   async login(loginUserDto: LoginUserDto, isAdmin = false) {
@@ -145,21 +93,10 @@ export class UserService {
     if (user.password !== md5(password)) {
       throw new HttpException('密码错误', HttpStatus.BAD_REQUEST);
     }
-    const { roles } = user;
+
+    const userVo = plainToClass(UserDetailVo, user);
     const vo = new LoginUserVo();
-    vo.userInfo = {
-      id: user.id,
-      username: user.username,
-      nickName: user.nickName,
-      email: user.email,
-      avatar: user.avatar,
-      phone: user.phone,
-      isFrozen: user.isFrozen,
-      isAdmin: user.isAdmin,
-      createTime: user.createTime,
-      roles: this.tranformRoles(roles),
-      permissions: this.transformPermission(roles),
-    };
+    vo.userInfo = userVo;
     return vo;
   }
   async sendCaptcha(email: string, prefix: string, subject: string) {
@@ -325,5 +262,34 @@ export class UserService {
       this.logger.error(e, UserService);
       return '注册失败';
     }
+  }
+
+  async getUserList(
+    page: number,
+    pageSize: number,
+    username: string,
+    nickName: string,
+  ) {
+    const skip = (page - 1) * pageSize;
+    const condition: Record<string, any> = {};
+
+    if (username) {
+      condition.username = Like(`%${username}%`);
+    }
+    if (nickName) {
+      condition.nickName = Like(`%${nickName}%`);
+    }
+    const [list, total] = await this.userRepository.findAndCount({
+      select: ['id', 'username', 'nickName', 'email', 'isFrozen', 'createTime'],
+      skip,
+      take: pageSize,
+      where: condition,
+      relations: ['roles', 'roles.permissions'],
+    });
+
+    return {
+      list,
+      total,
+    };
   }
 }

@@ -9,7 +9,7 @@ declare global {
   interface JwtUserData {
     userId: number;
     username: string;
-    roles: string[];
+    roles: number[];
     permissions: PermissionEntity[];
   }
 }
