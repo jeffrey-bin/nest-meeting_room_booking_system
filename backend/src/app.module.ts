@@ -18,6 +18,7 @@ import { LoginGuard } from './login.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { PermissionGuard } from './permission.guard';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { StatisticModule } from './statistic/statistic.module';
 import * as path from 'path';
 
 @Module({
@@ -73,6 +74,7 @@ import * as path from 'path';
     UserModule,
     MeetingRoomModule,
     BookingModule,
+    StatisticModule,
   ],
   controllers: [AppController],
   providers: [
