@@ -188,6 +188,7 @@ export class BookingService {
     if (!userEntity.isAdmin) {
       throw new HttpException('没有权限', HttpStatus.FORBIDDEN);
     }
+    // findOne方法无法关联attendees
     // const booking = await this.bookingRepository.findOne({
     //   where: { id },
     //   relations: ['user', 'meetingRoom', 'attendees'],
