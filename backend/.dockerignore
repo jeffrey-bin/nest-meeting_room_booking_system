@@ -1,0 +1,10 @@
+*.md
+!README.md
+node_modules/
+*.txt
+.git/
+.vscode/
+.eslintignore
+.eslintrc
+.prettierrc
+.prettierignore

@@ -19,7 +19,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { PermissionGuard } from './permission.guard';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { StatisticModule } from './statistic/statistic.module';
-import * as path from 'path';
+import path from 'path';
 
 @Module({
   imports: [
@@ -28,7 +28,7 @@ import * as path from 'path';
     }),
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: 'src/.env',
+      envFilePath: path.join(__dirname, '.env'),
     }),
     TypeOrmModule.forRootAsync({
       useFactory(configService: ConfigService) {
@@ -50,9 +50,6 @@ import * as path from 'path';
           ],
           poolSize: 10,
           connectorPackage: 'mysql2',
-          extra: {
-            authPlugin: 'sha256_password',
-          },
         };
       },
       inject: [ConfigService],
